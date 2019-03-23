@@ -33,7 +33,7 @@ public class FidelityCSV2QIF {
 		HEADER_MAP.put("Settlement Date", "settlementDate");
 	}
 
-	public void cleanCSVfile() throws IOException {
+	public void cleanCSVfile(String inputCSV, String stagingCSV) throws IOException {
 		try (PrintWriter  writer = new PrintWriter(Files.newBufferedWriter(Paths.get(stagingCSV)))) {
 			try (Stream<String> stream = Files.lines(Paths.get(inputCSV))) {
 			    stream
@@ -50,27 +50,20 @@ public class FidelityCSV2QIF {
 		
 	}
 	
-	public FidelityCSV2QIF(String inputCSVName) {
-		super();
-		inputCSV = inputCSVName;
-		this.stagingCSV = this.inputCSV + ".staging.csv";
-		this.outputQif = this.inputCSV + ".qif";
+	public FidelityCSV2QIF() {
 	}
 
-	public void createQIF(String header) throws IOException {
-		cleanCSVfile();
-		CSVReader reader = new CSVReader(new FileReader(this.stagingCSV));
+	public void createQIF(String inputCSVName) throws IOException {
+		cleanCSVfile(inputCSVName, "staging.csv");
+		CSVReader reader = new CSVReader(new FileReader("staging.csv"));
 		List<InvestmentTransaction> transactions = parseCSV(reader);
-		boolean needheader = true;
-		File outputFile = new File(this.outputQif);
-		if (outputFile.length() > 0) {
-			needheader = false;
-		}
 		
-		PrintWriter pw = new PrintWriter(new FileWriter(outputFile,true), true);
-		if (needheader){
-			pw.println(header);
-		}
+		PrintWriter pwBank = new PrintWriter(new FileWriter(new File(inputCSVName + ".bank.qif"),true), true);
+		pwBank.println("!Type:Bank");
+		
+		PrintWriter pwInvest = new PrintWriter(new FileWriter(new File(inputCSVName + ".invest.qif"),true), true);
+		pwInvest.println("!Type:Invst");
+		
 		int actualTransNo = 0;
 		for (int i = 0; i < transactions.size(); i++) {
 			InvestmentTransaction t = transactions.get(i);
@@ -80,11 +73,17 @@ public class FidelityCSV2QIF {
 				} else if ("FOREIGN TAX PAID".equals(t.getAction())) {
 					t.setCategory("Taxes:FOREIGN TAX PAID");
 				}
-				pw.println(t.toQIFString());
+				if (t.isBankingAction()) {
+					pwBank.println(t.toQIFBankString());
+				} else {
+					pwInvest.println(t.toQIFInvestmentString());
+				}
+					
 				actualTransNo++;
 			}
 		}
-		pw.close();
+		pwBank.close();
+		pwInvest.close();
 		System.out.println(actualTransNo + " transaction generated.");
 	}
 	
@@ -92,9 +91,9 @@ public class FidelityCSV2QIF {
 
 
 	public static void main(String[] args) throws IOException {
-		FidelityCSV2QIF converter = new FidelityCSV2QIF(args[0]);
-   		converter.createQIF("!Type:Invst");
-	}
+		FidelityCSV2QIF converter = new FidelityCSV2QIF();
+   		converter.createQIF(args[0]);
+ 	}
 
 	public static List<InvestmentTransaction> parseCSV(CSVReader reader) {
 

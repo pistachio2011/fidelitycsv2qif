@@ -1,8 +1,7 @@
 package investment;
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class InvestmentTransaction {
+public class BankTransaction {
 	private String tradeDate = null;
 	private String action = null;
 	private String securityDesc = null;
@@ -133,27 +132,18 @@ public class InvestmentTransaction {
 		ACTION_MAP.put("Sell", "Sell");
 		ACTION_MAP.put("Shares In", "ReinvDiv");
 		ACTION_MAP.put("Add Shares", "ShrsIn");
-		ACTION_MAP.put("REDEMPTION PAYOUT", "Sell");
-
-//		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
+		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
+		ACTION_MAP.put("INTEREST", "Interest");
+		ACTION_MAP.put("INTEREST EARNED", "Interest");
 	}
 	
 	static Set<String> IGNORABLE_ACTION = new HashSet<String>();
 	static {
 		IGNORABLE_ACTION.add("");
+		IGNORABLE_ACTION.add("PURCHASE INTO CORE ACCOUNT");
+		IGNORABLE_ACTION.add("REDEMPTION FROM CORE ACCOUNT");
+		IGNORABLE_ACTION.add("JOURNALED");
 	}
-	
-	static Set<String> BANKING_ACTION = new HashSet<String>();
-	static {
-		BANKING_ACTION.add("INTEREST");
-		BANKING_ACTION.add("DEPOSIT");
-		BANKING_ACTION.add("TRANSFER");
-		BANKING_ACTION.add("PURCHASE INTO CORE ACCOUNT");
-		BANKING_ACTION.add("REDEMPTION FROM CORE ACCOUNT");
-		BANKING_ACTION.add("JOURNALED");		
-	}
-	
-	
 	
 	public boolean isIgnorable(){
 	    if (this.action == null) {
@@ -180,18 +170,12 @@ public class InvestmentTransaction {
 		return sb.toString();
 	}
 	
-	public static boolean containsWordsArray(String inputString, Set<String> words) {
-		List<String> found = words.stream()
-				.filter(word ->  inputString.toLowerCase().indexOf(word.toLowerCase()) >= 0 )
-				.collect(Collectors.toList()); 
-	  
-	    return !found.isEmpty();
-	}
-	
-	public boolean isBankingAction() {
-		return (containsWordsArray(this.getAction(), BANKING_ACTION)) 
-				|| (this.getSecurityDesc().indexOf("CASH") >= 0);
-			
+	public String toQIFString() {
+		if (this.getSymbol() == null) {
+			return this.toQIFBankString();
+		} else {
+			return this.toQIFInvestmentString();
+		}
 	}
 	
 	public String toQIFInvestmentString() {
