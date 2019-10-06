@@ -122,7 +122,6 @@ public class InvestmentTransaction {
 	static {
 		ACTION_MAP.put("YOU SOLD", "Sell");
 		ACTION_MAP.put("IN LIEU OF FRX SHARE", "Sell");
-	
 		ACTION_MAP.put("REINVESTMENT", "ReinvDiv");
 		ACTION_MAP.put("DIVIDEND RECEIVED", "Div");
 		ACTION_MAP.put("YOU BOUGHT", "Buy");
@@ -133,14 +132,16 @@ public class InvestmentTransaction {
 		ACTION_MAP.put("Sell", "Sell");
 		ACTION_MAP.put("Shares In", "ReinvDiv");
 		ACTION_MAP.put("Add Shares", "ShrsIn");
+		ACTION_MAP.put("REVENUE CREDIT", "ShrsIn");
 		ACTION_MAP.put("REDEMPTION PAYOUT", "Sell");
+		
 
 //		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
 	}
 	
 	static Set<String> IGNORABLE_ACTION = new HashSet<String>();
 	static {
-		IGNORABLE_ACTION.add("");
+		IGNORABLE_ACTION.add("downloaded");
 	}
 	
 	static Set<String> BANKING_ACTION = new HashSet<String>();
@@ -152,17 +153,18 @@ public class InvestmentTransaction {
 		BANKING_ACTION.add("REDEMPTION FROM CORE ACCOUNT");
 		BANKING_ACTION.add("JOURNALED");		
 	}
+	static HashMap<String, String> CATEGORY = new HashMap<String, String>();	
+	static {
+		CATEGORY.put("INTEREST", "Investment Income");
+		CATEGORY.put("REINVESTMENT", "Investment Income");
+		CATEGORY.put("DIVIDEND RECEIVED",  "Investment Income");
+	}
+
 	
 	
 	
 	public boolean isIgnorable(){
-	    if (this.action == null) {
-	    	return true;
-	    }
-	    if ("FDRXX".equals(getSymbol()) && "REINVESTMENT".equals(getAction())) {
-	    	return true;
-	    }
-	    if (IGNORABLE_ACTION.contains(getAction())) {
+	    if (this.action == null || this.amount == null) {
 	    	return true;
 	    }
 	    return false;
@@ -190,7 +192,8 @@ public class InvestmentTransaction {
 	
 	public boolean isBankingAction() {
 		return (containsWordsArray(this.getAction(), BANKING_ACTION)) 
-				|| (this.getSecurityDesc().indexOf("CASH") >= 0);
+				|| (this.getSecurityDesc().indexOf("CASH") >= 0)
+				|| (this.symbol.equals("FDRXX"));
 			
 	}
 	
@@ -227,8 +230,8 @@ public class InvestmentTransaction {
 		sb.append("\nT");
 		sb.append(this.getAmount());
 		sb.append("\nP");
-		sb.append(this.getSecurityDesc());
 		sb.append("\nL");
+		sb.append(CATEGORY.get(getAction()));
 		sb.append("\n^");
 		return sb.toString();
 		
