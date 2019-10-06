@@ -129,14 +129,15 @@ public class InvestmentTransaction {
 		ACTION_MAP.put("FOREIGN TAX PAID", "MiscExp");
 		ACTION_MAP.put("FEE CHARGED", "MiscExp");
 		ACTION_MAP.put("Buy", "Buy");
+		ACTION_MAP.put("BUY", "Buy");
 		ACTION_MAP.put("Sell", "Sell");
+		ACTION_MAP.put("SELL", "Sell");
+		
 		ACTION_MAP.put("Shares In", "ReinvDiv");
 		ACTION_MAP.put("Add Shares", "ShrsIn");
-		ACTION_MAP.put("REVENUE CREDIT", "ShrsIn");
-		ACTION_MAP.put("REDEMPTION PAYOUT", "Sell");
-		
-
-//		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
+		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
+		ACTION_MAP.put("INTEREST", "Interest");
+		ACTION_MAP.put("INTEREST EARNED", "Interest");
 	}
 	
 	static Set<String> IGNORABLE_ACTION = new HashSet<String>();
