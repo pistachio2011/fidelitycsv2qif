@@ -30,21 +30,17 @@ public class InvestmentTransaction {
 		this.tradeDate = tradeDate;
 	}
 	public String getMoneyAction() {
-		return ACTION_MAP.get(getAction());
+		List<String> actions = containsWordsArray(getAction(), ACTION_MAP.keySet());
+		if (actions.size() >0) {
+            	return ACTION_MAP.get(actions.get(0));
+            }
+            else { 
+            	return getAction();
+            }
 	}
 	
 	public String getAction() {
 		String act = clean(action);
-		if (act.startsWith("YOU BOUGHT")) {
-			return "YOU BOUGHT";
-		}
-		if (act.startsWith("YOU SOLD")) {
-			return "YOU SOLD";
-		}
-		int index = act.indexOf(" as of");
-		if (index > 0) {
-			return act.substring(0, index);
-		}
 		return act;
 	}
 	
@@ -135,9 +131,8 @@ public class InvestmentTransaction {
 		
 		ACTION_MAP.put("Shares In", "ReinvDiv");
 		ACTION_MAP.put("Add Shares", "ShrsIn");
-		ACTION_MAP.put("REDEMPTION PAYOUT", "Redeem CD/Bond");
-		ACTION_MAP.put("INTEREST", "Interest");
-		ACTION_MAP.put("INTEREST EARNED", "Interest");
+		ACTION_MAP.put("REDEMPTION PAYOUT", "RtrnCap");
+		ACTION_MAP.put("INTEREST", "IntInc");
 	}
 	
 	static Set<String> IGNORABLE_ACTION = new HashSet<String>();
@@ -147,12 +142,13 @@ public class InvestmentTransaction {
 	
 	static Set<String> BANKING_ACTION = new HashSet<String>();
 	static {
-		BANKING_ACTION.add("INTEREST");
+		BANKING_ACTION.add("Electronic Funds Transfer Received");
 		BANKING_ACTION.add("DEPOSIT");
 		BANKING_ACTION.add("TRANSFER");
 		BANKING_ACTION.add("PURCHASE INTO CORE ACCOUNT");
 		BANKING_ACTION.add("REDEMPTION FROM CORE ACCOUNT");
-		BANKING_ACTION.add("JOURNALED");		
+		BANKING_ACTION.add("JOURNALED");	
+		BANKING_ACTION.add("DIRECT DEPOSIT");
 	}
 	static HashMap<String, String> CATEGORY = new HashMap<String, String>();	
 	static {
@@ -174,28 +170,26 @@ public class InvestmentTransaction {
 	public String toString(){
 		StringBuffer sb = new StringBuffer();
 		sb.append(this.getTradeDate());
-		sb.append(this.getMoneyAction());
-		sb.append(this.symbol);
-		sb.append(this.commission);
-		sb.append(this.quantity);
-		sb.append(this.price);
-		sb.append(this.amount);
+		sb.append("|" + this.getAction());
+		sb.append("|" + this.getMoneyAction());
+		sb.append("|" + this.symbol);
+		sb.append("|" + this.commission);
+		sb.append("|" + this.quantity);
+		sb.append("|" + this.price);
+		sb.append("|" + this.amount);
 		return sb.toString();
 	}
 	
-	public static boolean containsWordsArray(String inputString, Set<String> words) {
+	public static List<String> containsWordsArray(String inputString, Set<String> words) {
 		List<String> found = words.stream()
 				.filter(word ->  inputString.toLowerCase().indexOf(word.toLowerCase()) >= 0 )
 				.collect(Collectors.toList()); 
 	  
-	    return !found.isEmpty();
+	    return found;
 	}
 	
 	public boolean isBankingAction() {
-		return (containsWordsArray(this.getAction(), BANKING_ACTION)) 
-				|| (this.getSecurityDesc().indexOf("CASH") >= 0)
-				|| (this.symbol.equals("FDRXX"));
-			
+		return !(containsWordsArray(this.getAction(), BANKING_ACTION)).isEmpty() ;		
 	}
 	
 	public String toQIFInvestmentString() {
@@ -227,7 +221,7 @@ public class InvestmentTransaction {
 		sb.append("D");
 		sb.append(this.getTradeDate());
 		sb.append("\nM");
-		sb.append(this.getAction());
+		sb.append(this.getMoneyAction());
 		sb.append("\nT");
 		sb.append(this.getAmount());
 		sb.append("\nP");

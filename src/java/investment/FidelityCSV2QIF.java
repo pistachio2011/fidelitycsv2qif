@@ -38,8 +38,12 @@ public class FidelityCSV2QIF {
 			try (Stream<String> stream = Files.lines(Paths.get(inputCSV))) {
 			    stream
 			         .map(String::trim)
-			         .filter(line->!line.isEmpty())
-			         .forEach(line -> writer.println(line))
+			         .filter(line-> Character.isDigit(line.charAt(0))||line.contains("Run Date"))
+			         .forEach(line -> 
+			         { writer.println(line.replace(", ", ","));
+			         	System.out.println(line + " >" + line.replace(",", "")+">"+ line.replace(",", "").trim().length());
+			        	 
+			         })
 			         ;
 			   
 			    stream.close();
@@ -67,7 +71,8 @@ public class FidelityCSV2QIF {
 		int actualTransNo = 0;
 		for (int i = 0; i < transactions.size(); i++) {
 			InvestmentTransaction t = transactions.get(i);
-			if (!t.isIgnorable()) {
+			System.out.println(t);
+			if (!t.isIgnorable() && t.getTradeDate() != null && t.getTradeDate().length() > 7) {
 				if ("FEE CHARGED".equals(t.getAction())) {
 					t.setCategory("Bank Charges:Fee Charged");
 				} else if ("FOREIGN TAX PAID".equals(t.getAction())) {
@@ -92,7 +97,18 @@ public class FidelityCSV2QIF {
 
 	public static void main(String[] args) throws IOException {
 		FidelityCSV2QIF converter = new FidelityCSV2QIF();
-   		converter.createQIF(args[0]);
+		Files.list(new File(args[0]).toPath())
+        .filter(path -> path.toString().endsWith("csv"))
+        .forEach(path -> {
+            System.out.println(path.toString());
+            try {
+				converter.createQIF(path.toString());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        });
+   		
  	}
 
 	public static List<InvestmentTransaction> parseCSV(CSVReader reader) {
