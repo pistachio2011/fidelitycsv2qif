@@ -1,36 +1,56 @@
 package investment;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
 import au.com.bytecode.opencsv.CSVReader;
-import au.com.bytecode.opencsv.CSVWriter;
 import au.com.bytecode.opencsv.bean.CsvToBean;
 import au.com.bytecode.opencsv.bean.HeaderColumnNameTranslateMappingStrategy;
-
-import java.util.*;
-import java.util.stream.Stream;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class FidelityCSV2QIF {
 	private String inputCSV = null;
 	private String outputQif = null;
 	private String stagingCSV = null;
+// Fidelity	Joint Account:
+//	Run Date,Action,Symbol,Security Description,Security Type,Exchange Quantity,Exchange Currency,Quantity,Currency,Price,Exchange Rate,Commission,Fees,Accrued Interest,Amount,Settlement Date
+// Fidelity IRA
+//Run Date,Action,Symbol,Security Description,Security Type,Quantity,Price ($),Commission ($),Fees ($),Accrued Interest ($),Amount ($),Settlement Date
+
+
 	
 	static Map<String, String> HEADER_MAP = new HashMap<String, String>();
 	static {
 		HEADER_MAP.put("Run Date", "tradeDate");
 		HEADER_MAP.put("Action", "action");
 		HEADER_MAP.put("Security Description", "securityDesc");
-		HEADER_MAP.put("Price ($)", "price");
+//		HEADER_MAP.put("Price", "price");
+//		HEADER_MAP.put("Price ($)", "price");
 		HEADER_MAP.put("Symbol", "symbol");
 		HEADER_MAP.put("Security Type", "securityType");
 		HEADER_MAP.put("Quantity", "quantity");
+		HEADER_MAP.put("Commission", "commission");
 		HEADER_MAP.put("Commission ($)", "commission");
+		HEADER_MAP.put("Fees", "fees");
 		HEADER_MAP.put("Fees ($)", "fees");
 		HEADER_MAP.put("Accrued Interest ($)", "accruedInterest");
 		HEADER_MAP.put("Amount", "amount");
 		HEADER_MAP.put("Amount ($)", "amount");
 		HEADER_MAP.put("Settlement Date", "settlementDate");
+
+		// BOA FSA
+//		Requested Date,Processed Date,Description,Method,Amount,Available Cash Balance,Applied to Contribution Maximum,Check Number,Check Date,Date of Service,Merchant Name,Adjustment Reason,Consumer Note,Tax Year,Tax Detail
+		
+		HEADER_MAP.put("Processed Date", "tradeDate");
+		HEADER_MAP.put("Description", "action");
+		HEADER_MAP.put("Amount", "amount");
 	}
 
 	public void cleanCSVfile(String inputCSV, String stagingCSV) throws IOException {
@@ -38,7 +58,8 @@ public class FidelityCSV2QIF {
 			try (Stream<String> stream = Files.lines(Paths.get(inputCSV))) {
 			    stream
 			         .map(String::trim)
-			         .filter(line-> Character.isDigit(line.charAt(0))||line.contains("Run Date"))
+			         .filter(line -> line != null && line.length() > 8)
+			         .filter(line-> Character.isDigit(line.charAt(0))||line.contains("Amount"))
 			         .forEach(line -> 
 			         { writer.println(line.replace(", ", ","));
 			         	System.out.println(line + " >" + line.replace(",", "")+">"+ line.replace(",", "").trim().length());
@@ -60,7 +81,7 @@ public class FidelityCSV2QIF {
 	public void createQIF(String inputCSVName) throws IOException {
 		cleanCSVfile(inputCSVName, "staging.csv");
 		CSVReader reader = new CSVReader(new FileReader("staging.csv"));
-		List<InvestmentTransaction> transactions = parseCSV(reader);
+		List<Transaction> transactions = parseCSV(reader);
 		
 		PrintWriter pwBank = new PrintWriter(new FileWriter(new File(inputCSVName + ".bank.qif"),true), true);
 		pwBank.println("!Type:Bank");
@@ -70,18 +91,13 @@ public class FidelityCSV2QIF {
 		
 		int actualTransNo = 0;
 		for (int i = 0; i < transactions.size(); i++) {
-			InvestmentTransaction t = transactions.get(i);
+			Transaction t = transactions.get(i);
 			System.out.println(t);
-			if (!t.isIgnorable() && t.getTradeDate() != null && t.getTradeDate().length() > 7) {
-				if ("FEE CHARGED".equals(t.getAction())) {
-					t.setCategory("Bank Charges:Fee Charged");
-				} else if ("FOREIGN TAX PAID".equals(t.getAction())) {
-					t.setCategory("Taxes:FOREIGN TAX PAID");
-				}
-				if (t.isBankingAction()) {
-					pwBank.println(t.toQIFBankString());
+			if (!t.isIgnorable()) {
+				if (QifWriter.isBankingAction(t.getAction())) {
+					pwBank.println(QifWriter.toQIFBankString(t));
 				} else {
-					pwInvest.println(t.toQIFInvestmentString());
+					pwInvest.println(QifWriter.toQIFInvestmentString(t));
 				}
 					
 				actualTransNo++;
@@ -111,16 +127,16 @@ public class FidelityCSV2QIF {
    		
  	}
 
-	public static List<InvestmentTransaction> parseCSV(CSVReader reader) {
+	public static List<Transaction> parseCSV(CSVReader reader) {
 
-		HeaderColumnNameTranslateMappingStrategy<InvestmentTransaction> strat = new HeaderColumnNameTranslateMappingStrategy<InvestmentTransaction>();
-		strat.setType(InvestmentTransaction.class);
+		HeaderColumnNameTranslateMappingStrategy<Transaction> strat = new HeaderColumnNameTranslateMappingStrategy<Transaction>();
+		strat.setType(Transaction.class);
 
 		strat.setColumnMapping(HEADER_MAP);
 
-		CsvToBean<InvestmentTransaction> csv = new CsvToBean<InvestmentTransaction>();
+		CsvToBean<Transaction> csv = new CsvToBean<Transaction>();
 
-		List<InvestmentTransaction> list = csv.parse(strat, reader);
+		List<Transaction> list = csv.parse(strat, reader);
 		return list;
 	}
 	

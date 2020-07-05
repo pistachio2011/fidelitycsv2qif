@@ -3,22 +3,16 @@ package investment;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-
-import au.com.bytecode.opencsv.CSVReader;
 
 public class Qfx2Qif {
 
@@ -105,7 +99,7 @@ public class Qfx2Qif {
 //        </BUYMF>
         int count = 0;
         for (Element el : doc.body().select(actionType)) {
-        	InvestmentTransaction trans = new InvestmentTransaction();
+        	Transaction trans = new Transaction();
         	
             // 20181128020000[-5:EST]
             String dtPosted =  el.select("INVTRAN").select("DTTRADE").text();
@@ -130,7 +124,7 @@ public class Qfx2Qif {
             trans.setCommission(el.select("COMMISSION").text());
             trans.setSymbol(el.select("COMMISSION").text());
             
-            w.write(trans.toQIFInvestmentString());
+            w.write(QifWriter.toQIFInvestmentString(trans));
             
             w.write("^\n");
 
